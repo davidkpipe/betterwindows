@@ -86,13 +86,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: Hotkeys
 
     private func registerHotkeys() {
-        // ⌃⌥Return: maximize the focused window.
-        hotkeys.register(keyCode: kVK_Return, modifiers: controlKey | optionKey) { [weak self] in
-            self?.maximizeFocusedWindow()
+        // Rectangle's idiom: ⌃⌥ + arrows for halves, Return to maximize,
+        // U/I/J/K for quarters, C to center.
+        let bindings: [(keyCode: Int, zone: SnapZone)] = [
+            (kVK_LeftArrow, .leftHalf),
+            (kVK_RightArrow, .rightHalf),
+            (kVK_UpArrow, .topHalf),
+            (kVK_DownArrow, .bottomHalf),
+            (kVK_Return, .maximize),
+            (kVK_ANSI_U, .topLeftQuarter),
+            (kVK_ANSI_I, .topRightQuarter),
+            (kVK_ANSI_J, .bottomLeftQuarter),
+            (kVK_ANSI_K, .bottomRightQuarter),
+            (kVK_ANSI_C, .center),
+        ]
+        for binding in bindings {
+            hotkeys.register(keyCode: binding.keyCode, modifiers: controlKey | optionKey) { [weak self] in
+                self?.snapFocusedWindow(to: binding.zone)
+            }
         }
     }
 
-    private func maximizeFocusedWindow() {
+    private func snapFocusedWindow(to zone: SnapZone) {
         guard settings.isEnabled else { return }
         guard WindowControl.isTrusted() else {
             presentAccessibilityGuidance()
@@ -100,16 +115,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         guard let (window, app) = try? WindowControl.focusedWindow(),
               let windowFrame = WindowControl.frame(of: window),
-              let target = maximizeTarget(forWindowAt: windowFrame)
+              let visibleFrame = visibleFrameCG(forWindowAt: windowFrame)
         else {
             return
         }
+        let target = SnapEngine.targetFrame(
+            for: zone,
+            visibleFrame: visibleFrame,
+            windowFrame: windowFrame
+        )
         WindowControl.setFrame(target, window: window, app: app)
     }
 
     /// The visible frame (menu bar and Dock excluded), in AX coordinates, of
     /// the display the window currently occupies.
-    private func maximizeTarget(forWindowAt windowFrame: CGRect) -> CGRect? {
+    private func visibleFrameCG(forWindowAt windowFrame: CGRect) -> CGRect? {
         guard let primary = NSScreen.screens.first else { return nil }
         let primaryHeight = primary.frame.height
         let center = CGPoint(x: windowFrame.midX, y: windowFrame.midY)
