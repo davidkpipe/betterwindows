@@ -43,4 +43,21 @@ final class SwitcherSessionTests: XCTestCase {
 
         XCTAssertEqual(session.selectedIndex, 0)
     }
+
+    func testSelectJumpsDirectly() {
+        var session = SwitcherSession(count: 4)!
+
+        session.select(3)
+
+        XCTAssertEqual(session.selectedIndex, 3)
+    }
+
+    func testSelectIgnoresOutOfRangeIndices() {
+        var session = SwitcherSession(count: 4)!
+
+        session.select(4)
+        session.select(-1)
+
+        XCTAssertEqual(session.selectedIndex, 1, "initial selection stays put")
+    }
 }

@@ -20,4 +20,11 @@ public struct SwitcherSession {
     public mutating func retreat() {
         selectedIndex = (selectedIndex - 1 + count) % count
     }
+
+    /// Jumps the selection directly (grid arrow moves, mouse hover).
+    /// Out-of-range indices are ignored.
+    public mutating func select(_ index: Int) {
+        guard (0 ..< count).contains(index) else { return }
+        selectedIndex = index
+    }
 }

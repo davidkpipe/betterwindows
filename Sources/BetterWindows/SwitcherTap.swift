@@ -6,10 +6,15 @@ import Carbon.HIToolbox
 /// they never reach the frontmost app. Stopping the tap restores native
 /// Option-Tab behavior. Creation requires Accessibility.
 final class SwitcherTap {
+    enum MoveDirection {
+        case left, right, up, down
+    }
+
     /// Return true to begin a session (there was something to switch to).
     var onBegin: (() -> Bool)?
     var onAdvance: (() -> Void)?
     var onRetreat: (() -> Void)?
+    var onMove: ((MoveDirection) -> Void)?
     var onCommit: (() -> Void)?
     var onCancel: (() -> Void)?
 
@@ -49,6 +54,13 @@ final class SwitcherTap {
         self.tap = tap
         runLoopSource = source
         return true
+    }
+
+    /// Ends the session without a commit or cancel callback — used when the
+    /// coordinator already resolved it another way (a thumbnail click). The
+    /// eventual Option release then passes through as a plain flags change.
+    func endSession() {
+        sessionActive = false
     }
 
     func stop() {
@@ -118,6 +130,11 @@ final class SwitcherTap {
             onCancel?()
             return nil
         }
+
+        if sessionActive, let direction = Self.arrowDirection(for: keyCode) {
+            onMove?(direction)
+            return nil
+        }
         return Unmanaged.passUnretained(event)
     }
 
@@ -127,9 +144,19 @@ final class SwitcherTap {
         if keyCode == Int64(kVK_Tab), event.flags.contains(.maskAlternate) {
             return nil
         }
-        if sessionActive, keyCode == Int64(kVK_Escape) {
+        if sessionActive, keyCode == Int64(kVK_Escape) || Self.arrowDirection(for: keyCode) != nil {
             return nil
         }
         return Unmanaged.passUnretained(event)
+    }
+
+    private static func arrowDirection(for keyCode: Int64) -> MoveDirection? {
+        switch keyCode {
+        case Int64(kVK_LeftArrow): return .left
+        case Int64(kVK_RightArrow): return .right
+        case Int64(kVK_UpArrow): return .up
+        case Int64(kVK_DownArrow): return .down
+        default: return nil
+        }
     }
 }
