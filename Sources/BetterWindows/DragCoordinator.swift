@@ -49,6 +49,18 @@ final class DragCoordinator {
         }
     }
 
+    /// Display layout changed or the machine woke: any in-flight preview
+    /// targets stale geometry, and macOS may have silently disabled the
+    /// tap. Cancel the former, re-assert the latter.
+    func handleSystemStateChange() {
+        if session.phase != .idle {
+            session.cancel()
+            clearDragState()
+        }
+        monitor?.reassert()
+        startIfPossible()
+    }
+
     private func handle(_ event: DragMonitor.Event) {
         guard settings.isEnabled, settings.isDragSnappingEnabled else {
             if session.phase != .idle {

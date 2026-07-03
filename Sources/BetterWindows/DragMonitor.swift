@@ -66,6 +66,14 @@ final class DragMonitor {
         tap = nil
     }
 
+    /// Re-enables the tap if macOS silently disabled it (sleep/wake can do
+    /// this without delivering a tapDisabled event). No-op when healthy.
+    func reassert() {
+        if let tap {
+            CGEvent.tapEnable(tap: tap, enable: true)
+        }
+    }
+
     private func handle(type: CGEventType, event: CGEvent) {
         switch type {
         case .leftMouseDown:

@@ -2,7 +2,7 @@
 
 Windows-style window management for macOS: drag-to-edge snapping with an overlay preview, customizable hotkeys, and an Option-Tab window switcher with live thumbnails. A from-scratch replacement for 1Piece.
 
-**Status:** early development. Window snapping (v0.1 scope) is functional: hotkey-driven zone snapping (halves, quarters, maximize, center) with snap-and-restore, full drag-to-edge snapping — overlay preview during the drag, single-write commit on release, drag-away un-snap — a settings window (re-recordable shortcuts, behavior toggles, launch at login), and a permissions onboarding flow with live status indicators. The Option-Tab switcher (v0.2) shows live window thumbnails with Screen Recording granted, falling back to icons + titles without it. See the [PRD](https://github.com/davidkpipe/betterwindows/issues/1) and open issues for the roadmap.
+**Status:** feature-complete against the [PRD](https://github.com/davidkpipe/betterwindows/issues/1). Window snapping (v0.1): hotkey-driven zone snapping (halves, quarters, maximize, center) with snap-and-restore, full drag-to-edge snapping — overlay preview during the drag, single-write commit on release, drag-away un-snap — a settings window (re-recordable shortcuts, behavior toggles, launch at login), and a permissions onboarding flow with live status indicators. The Option-Tab switcher (v0.2): live window thumbnails with Screen Recording granted (icons + titles without it) and full grid navigation. Both survive display changes and sleep/wake without a relaunch, and idle resource use is ~zero.
 
 ## Requirements
 
@@ -36,7 +36,9 @@ Default hotkeys (⌃⌥ is Control + Option) — every shortcut can be re-record
 | ⌃⌥C | Center (keeps the window's size) |
 | ⌃⌥⌫ | Restore pre-snap size and position |
 
-Every action applies to the focused window on whichever display it occupies.
+Every action applies to the focused window on whichever display it occupies. Restore (⌃⌥⌫) puts the window back exactly where it was — unless that display has since been disconnected, in which case it lands fully visible on the nearest attached display, keeping its size when it fits.
+
+Display unplug/replug, resolution changes, and sleep/wake are all handled in place: zone geometry is computed live per event, in-flight previews and switcher sessions cancel when the layout changes, and the event taps re-assert themselves after wake. Idle CPU is ~0% — everything is event-driven, with no polling.
 
 Dragging a window to a screen edge previews its zone as a translucent overlay on the display under the cursor — left/right edges → halves, top edge → maximize, corners → quarters. Moving away or pressing Esc dismisses the preview. Releasing inside a zone commits the window to exactly the previewed frame: the frame is written once, on release, never during the drag (the structural fix for the revert-on-release bug that motivated this project). Dragging a snapped window away from its zone restores its pre-snap size under the cursor.
 

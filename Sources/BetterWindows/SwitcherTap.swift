@@ -63,6 +63,14 @@ final class SwitcherTap {
         sessionActive = false
     }
 
+    /// Re-enables the tap if macOS silently disabled it (sleep/wake can do
+    /// this without delivering a tapDisabled event). No-op when healthy.
+    func reassert() {
+        if let tap {
+            CGEvent.tapEnable(tap: tap, enable: true)
+        }
+    }
+
     func stop() {
         if sessionActive {
             sessionActive = false
