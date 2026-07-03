@@ -8,9 +8,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private lazy var hotkeyStore = HotkeyStore(settings: settings)
     private var dragCoordinator: DragCoordinator?
     private var settingsWindowController: SettingsWindowController?
+    private var onboardingWindowController: OnboardingWindowController?
     private var statusItem: NSStatusItem?
     private var enabledMenuItem: NSMenuItem?
-    private var accessibilityMenuItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setUpStatusItem()
@@ -23,6 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let dragCoordinator = DragCoordinator(settings: settings, snapTracker: snapTracker)
         dragCoordinator.startIfPossible()
         self.dragCoordinator = dragCoordinator
+
+        presentOnboardingIfNeeded()
     }
 
     // MARK: Status item
@@ -52,14 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         enabledMenuItem.target = self
         menu.addItem(enabledMenuItem)
 
-        let accessibilityMenuItem = NSMenuItem(
-            title: "Grant Accessibility Access…",
-            action: #selector(openAccessibilitySettings(_:)),
-            keyEquivalent: ""
-        )
-        accessibilityMenuItem.target = self
-        menu.addItem(accessibilityMenuItem)
-
         let settingsItem = NSMenuItem(
             title: "Settings…",
             action: #selector(openSettings(_:)),
@@ -67,6 +61,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         settingsItem.target = self
         menu.addItem(settingsItem)
+
+        let setupItem = NSMenuItem(
+            title: "Setup Guide…",
+            action: #selector(openSetupGuide(_:)),
+            keyEquivalent: ""
+        )
+        setupItem.target = self
+        menu.addItem(setupItem)
 
         menu.addItem(.separator())
         menu.addItem(
@@ -80,7 +82,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         self.statusItem = statusItem
         self.enabledMenuItem = enabledMenuItem
-        self.accessibilityMenuItem = accessibilityMenuItem
         refreshMenuState()
     }
 
@@ -90,19 +91,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func refreshMenuState() {
         enabledMenuItem?.state = settings.isEnabled ? .on : .off
-        accessibilityMenuItem?.isHidden = WindowControl.isTrusted()
-        // Retry the drag tap here so granting Accessibility takes effect
-        // without a relaunch (full onboarding is a later slice).
+        // Retry the drag tap here as a backstop, so granting Accessibility
+        // takes effect without a relaunch even if onboarding never opened.
         dragCoordinator?.startIfPossible()
     }
 
     @objc private func toggleEnabled(_ sender: NSMenuItem) {
         settings.isEnabled.toggle()
         refreshMenuState()
-    }
-
-    @objc private func openAccessibilitySettings(_ sender: NSMenuItem) {
-        openAccessibilityPane()
     }
 
     @objc private func openSettings(_ sender: NSMenuItem) {
@@ -113,6 +109,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             )
         }
         settingsWindowController?.showWindow(nil)
+    }
+
+    @objc private func openSetupGuide(_ sender: NSMenuItem) {
+        showOnboarding()
+    }
+
+    // MARK: Onboarding
+
+    private func presentOnboardingIfNeeded() {
+        let allGranted = PermissionProbes.accessibilityGranted()
+            && PermissionProbes.screenRecordingGranted()
+        guard OnboardingGate.shouldAutoPresent(
+            hasCompletedOnboarding: settings.hasCompletedOnboarding,
+            allPermissionsGranted: allGranted
+        ) else {
+            return
+        }
+        showOnboarding()
+    }
+
+    private func showOnboarding() {
+        if onboardingWindowController == nil {
+            let controller = OnboardingWindowController(settings: settings)
+            controller.onAccessibilityGranted = { [weak self] in
+                self?.dragCoordinator?.startIfPossible()
+            }
+            onboardingWindowController = controller
+        }
+        onboardingWindowController?.showWindow(nil)
     }
 
     // MARK: Hotkeys
@@ -140,7 +165,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func snapFocusedWindow(to zone: SnapZone) {
         guard settings.isEnabled else { return }
         guard WindowControl.isTrusted() else {
-            presentAccessibilityGuidance()
+            showOnboarding()
             return
         }
         guard let (window, app, pid) = try? WindowControl.focusedWindow(),
@@ -161,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func restoreFocusedWindow() {
         guard settings.isEnabled else { return }
         guard WindowControl.isTrusted() else {
-            presentAccessibilityGuidance()
+            showOnboarding()
             return
         }
         guard let (window, app, _) = try? WindowControl.focusedWindow(),
@@ -176,30 +201,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// the display the window currently occupies.
     private func visibleFrameCG(forWindowAt windowFrame: CGRect) -> CGRect? {
         Displays.under(CGPoint(x: windowFrame.midX, y: windowFrame.midY))?.visibleFrame
-    }
-
-    // MARK: Accessibility permission
-
-    private func presentAccessibilityGuidance() {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "BetterWindows needs Accessibility access"
-        alert.informativeText = """
-            Moving and resizing windows uses the macOS Accessibility API. \
-            Enable BetterWindows under System Settings > Privacy & Security > \
-            Accessibility, then press the hotkey again.
-            """
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Not Now")
-        if alert.runModal() == .alertFirstButtonReturn {
-            openAccessibilityPane()
-        }
-    }
-
-    private func openAccessibilityPane() {
-        let pane = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-        if let url = URL(string: pane) {
-            NSWorkspace.shared.open(url)
-        }
     }
 }

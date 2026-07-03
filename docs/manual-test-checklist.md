@@ -63,7 +63,13 @@ Repeat the "Drag snapping" section in each of:
 - [ ] The drag-snap toggle disables edge previews live; re-enabling restores them without a relaunch
 - [ ] (App bundle only) The launch-at-login toggle survives logout/login and reflects the real registration state when the window is reopened
 
-## Permission gate
+## Onboarding & permission gate
 
-- [ ] With Accessibility revoked: any snap hotkey shows guidance with a working "Open System Settings" deep link — no silent failure
-- [ ] After granting Accessibility (no relaunch): open the status menu once, then drag snapping and hotkeys work
+- [ ] First launch with Accessibility missing: the welcome window opens automatically
+- [ ] Grant Accessibility while it is open: the indicator flips to "Granted" within ~1s without a relaunch, and drag snapping starts working immediately
+- [ ] The Screen Recording indicator likewise flips live when granted (nothing else changes today — it powers the future switcher thumbnails)
+- [ ] Each button lands on the right System Settings pane: Accessibility, Screen Recording, Desktop & Dock
+- [ ] macOS 15+: the tiling row shows On/Off matching "Drag windows to screen edges to tile"; toggling the setting updates the row while the window is open
+- [ ] Close the window once: it no longer auto-opens on later launches, and the status menu's **Setup Guide…** reopens it
+- [ ] With Accessibility revoked: any snap hotkey opens the welcome window — no silent failure
+- [ ] After granting Accessibility with the welcome window closed: open the status menu once, then drag snapping and hotkeys work

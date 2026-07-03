@@ -2,7 +2,7 @@
 
 Windows-style window management for macOS: drag-to-edge snapping with an overlay preview, customizable hotkeys, and an Option-Tab window switcher with live thumbnails. A from-scratch replacement for 1Piece.
 
-**Status:** early development. Window snapping (v0.1 scope) is functional: hotkey-driven zone snapping (halves, quarters, maximize, center) with snap-and-restore, full drag-to-edge snapping — overlay preview during the drag, single-write commit on release, drag-away un-snap — and a settings window (re-recordable shortcuts, drag-snap toggle, launch at login). The Option-Tab switcher (v0.2) is not built yet. See the [PRD](https://github.com/davidkpipe/betterwindows/issues/1) and open issues for the roadmap.
+**Status:** early development. Window snapping (v0.1 scope) is functional: hotkey-driven zone snapping (halves, quarters, maximize, center) with snap-and-restore, full drag-to-edge snapping — overlay preview during the drag, single-write commit on release, drag-away un-snap — a settings window (re-recordable shortcuts, drag-snap toggle, launch at login), and a permissions onboarding flow with live status indicators. The Option-Tab switcher (v0.2) is not built yet. See the [PRD](https://github.com/davidkpipe/betterwindows/issues/1) and open issues for the roadmap.
 
 ## Requirements
 
@@ -18,7 +18,9 @@ swift build
 swift run
 ```
 
-BetterWindows is menu-bar-only: look for the window icon in the menu bar — there is no Dock icon. The menu contains an **Enabled** toggle (persisted across relaunches) and **Quit**.
+BetterWindows is menu-bar-only: look for the window icon in the menu bar — there is no Dock icon. The menu contains an **Enabled** toggle (persisted across relaunches), **Settings…**, **Setup Guide…**, and **Quit**.
+
+On first launch with permissions missing, a welcome window opens automatically: one row per permission with a live granted/not-granted indicator, an explanation of exactly which feature needs it (snapping needs Accessibility; switcher thumbnails will need Screen Recording), and a button that opens the right System Settings pane. It also recommends turning off macOS's own drag-to-edge tiling (Desktop & Dock), which would otherwise fight BetterWindows' snapping. Indicators update live as you grant — no relaunch. Reopen it anytime via **Setup Guide…**.
 
 ## Usage
 
@@ -50,7 +52,7 @@ Scripts/make-app-bundle.sh
 
 This builds a release binary and wraps it as `build/BetterWindows.app` (ad-hoc signed). Launch it, grant Accessibility, and the launch-at-login toggle in Settings becomes available.
 
-Window control requires the macOS **Accessibility** permission (System Settings > Privacy & Security > Accessibility). Without it, invoking a hotkey shows guidance with a link to the right pane instead of failing silently. When running an unbundled dev build from a terminal, macOS may attribute the permission to the terminal app that launched it.
+Window control requires the macOS **Accessibility** permission (System Settings > Privacy & Security > Accessibility). Without it, invoking a hotkey opens the setup guide instead of failing silently. When running an unbundled dev build from a terminal, macOS may attribute the permission to the terminal app that launched it.
 
 To develop in Xcode instead, open the package directory (`File > Open…` on the repo root) — no project file needed.
 

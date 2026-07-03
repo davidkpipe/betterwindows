@@ -45,6 +45,14 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertFalse(AppSettings(defaults: defaults).isDragSnappingEnabled)
     }
 
+    func testOnboardingCompletionDefaultsToFalseAndPersists() {
+        XCTAssertFalse(AppSettings(defaults: defaults).hasCompletedOnboarding)
+
+        AppSettings(defaults: defaults).hasCompletedOnboarding = true
+
+        XCTAssertTrue(AppSettings(defaults: defaults).hasCompletedOnboarding)
+    }
+
     func testHotkeyBindingsRoundTrip() {
         let settings = AppSettings(defaults: defaults)
         XCTAssertNil(settings.storedHotkeyBindings(), "nothing stored on first launch")
