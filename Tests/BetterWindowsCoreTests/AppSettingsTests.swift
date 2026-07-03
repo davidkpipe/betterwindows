@@ -45,6 +45,14 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertFalse(AppSettings(defaults: defaults).isDragSnappingEnabled)
     }
 
+    func testSwitcherDefaultsToEnabledAndPersists() {
+        XCTAssertTrue(AppSettings(defaults: defaults).isSwitcherEnabled)
+
+        AppSettings(defaults: defaults).isSwitcherEnabled = false
+
+        XCTAssertFalse(AppSettings(defaults: defaults).isSwitcherEnabled)
+    }
+
     func testOnboardingCompletionDefaultsToFalseAndPersists() {
         XCTAssertFalse(AppSettings(defaults: defaults).hasCompletedOnboarding)
 

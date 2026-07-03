@@ -56,6 +56,18 @@ Repeat the "Drag snapping" section in each of:
 - [ ] Window edge/corner resize drag
 - [ ] Desktop rubber-band selection reaching an edge
 
+## Option-Tab switcher
+
+- [ ] Quick ⌥Tab (press and release together) flips to the previous window; a second quick ⌥Tab flips back
+- [ ] Hold ⌥, press Tab repeatedly: selection advances and wraps; ⇧Tab goes backward and wraps
+- [ ] Releasing ⌥ activates the highlighted window; Esc while holding ⌥ dismisses the panel and leaves focus unchanged
+- [ ] Two windows of the same app appear as separate entries; switching between them via the panel works
+- [ ] A minimized window appears (dimmed icon); selecting it and releasing ⌥ deminimizes and focuses it
+- [ ] With the switcher enabled, the frontmost app never receives Option-Tab (check in a text editor where ⌥Tab would insert a character); ⌘-Tab still opens the system app switcher
+- [ ] Toggle **Option-Tab Switcher** off in the status menu: ⌥Tab reaches the frontmost app natively; re-enable restores interception without a relaunch (same for the Settings checkbox)
+- [ ] With a second display: the panel appears on the display of the focused window
+- [ ] Windows on another Space do not appear; windows opened after the panel is up appear on the next invocation
+
 ## Settings window
 
 - [ ] Re-record a shortcut: it takes effect immediately (no relaunch) and survives relaunch
