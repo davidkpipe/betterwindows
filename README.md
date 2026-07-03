@@ -2,7 +2,7 @@
 
 Windows-style window management for macOS: drag-to-edge snapping with an overlay preview, customizable hotkeys, and an Option-Tab window switcher with live thumbnails. A from-scratch replacement for 1Piece.
 
-**Status:** early development. The repo currently contains the app skeleton plus hotkey-driven zone snapping (halves, quarters, maximize, center) with snap-and-restore, via the Accessibility API. See the [PRD](https://github.com/davidkpipe/betterwindows/issues/1) and open issues for the roadmap.
+**Status:** early development. The repo currently contains the app skeleton, hotkey-driven zone snapping (halves, quarters, maximize, center) with snap-and-restore, and drag-to-edge zone previews (commit-on-release lands in the next slice). See the [PRD](https://github.com/davidkpipe/betterwindows/issues/1) and open issues for the roadmap.
 
 ## Requirements
 
@@ -34,7 +34,9 @@ Default hotkeys (⌃⌥ is Control + Option):
 | ⌃⌥C | Center (keeps the window's size) |
 | ⌃⌥⌫ | Restore pre-snap size and position |
 
-Every action applies to the focused window on whichever display it occupies. Drag-to-edge snapping arrives in a later slice.
+Every action applies to the focused window on whichever display it occupies.
+
+Dragging a window to a screen edge previews its zone as a translucent overlay on the display under the cursor — left/right edges → halves, top edge → maximize, corners → quarters. Moving away or pressing Esc dismisses the preview, and the dragged window itself is never resized mid-drag. Committing the snap on release lands in the next slice.
 
 Window control requires the macOS **Accessibility** permission (System Settings > Privacy & Security > Accessibility). Without it, invoking a hotkey shows guidance with a link to the right pane instead of failing silently. When running an unbundled dev build from a terminal, macOS may attribute the permission to the terminal app that launched it.
 
