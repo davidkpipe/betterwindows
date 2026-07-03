@@ -1,19 +1,24 @@
 import AppKit
 import BetterWindowsCore
-import Carbon.HIToolbox
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let settings = AppSettings()
     private let hotkeys = HotkeyService()
     private let snapTracker = SnapTracker()
+    private lazy var hotkeyStore = HotkeyStore(settings: settings)
     private var dragCoordinator: DragCoordinator?
+    private var settingsWindowController: SettingsWindowController?
     private var statusItem: NSStatusItem?
     private var enabledMenuItem: NSMenuItem?
     private var accessibilityMenuItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setUpStatusItem()
-        registerHotkeys()
+
+        hotkeyStore.onChange = { [weak self] in
+            self?.applyHotkeys()
+        }
+        applyHotkeys()
 
         let dragCoordinator = DragCoordinator(settings: settings, snapTracker: snapTracker)
         dragCoordinator.startIfPossible()
@@ -55,6 +60,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         accessibilityMenuItem.target = self
         menu.addItem(accessibilityMenuItem)
 
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(openSettings(_:)),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         menu.addItem(.separator())
         menu.addItem(
             NSMenuItem(
@@ -92,32 +105,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         openAccessibilityPane()
     }
 
+    @objc private func openSettings(_ sender: NSMenuItem) {
+        if settingsWindowController == nil {
+            settingsWindowController = SettingsWindowController(
+                settings: settings,
+                hotkeyStore: hotkeyStore
+            )
+        }
+        settingsWindowController?.showWindow(nil)
+    }
+
     // MARK: Hotkeys
 
-    private func registerHotkeys() {
-        // Rectangle's idiom: ⌃⌥ + arrows for halves, Return to maximize,
-        // U/I/J/K for quarters, C to center.
-        let bindings: [(keyCode: Int, zone: SnapZone)] = [
-            (kVK_LeftArrow, .leftHalf),
-            (kVK_RightArrow, .rightHalf),
-            (kVK_UpArrow, .topHalf),
-            (kVK_DownArrow, .bottomHalf),
-            (kVK_Return, .maximize),
-            (kVK_ANSI_U, .topLeftQuarter),
-            (kVK_ANSI_I, .topRightQuarter),
-            (kVK_ANSI_J, .bottomLeftQuarter),
-            (kVK_ANSI_K, .bottomRightQuarter),
-            (kVK_ANSI_C, .center),
-        ]
-        for binding in bindings {
-            hotkeys.register(keyCode: binding.keyCode, modifiers: controlKey | optionKey) { [weak self] in
-                self?.snapFocusedWindow(to: binding.zone)
+    /// (Re)registers every action's current binding — called at launch and
+    /// whenever a shortcut is re-recorded, so changes apply immediately.
+    private func applyHotkeys() {
+        hotkeys.unregisterAll()
+        for action in SnapAction.allCases {
+            guard let binding = hotkeyStore.binding(for: action) else { continue }
+            hotkeys.register(keyCode: binding.keyCode, modifiers: binding.modifiers) { [weak self] in
+                self?.perform(action)
             }
         }
+    }
 
-        // ⌃⌥⌫: restore the focused window to its pre-snap frame.
-        hotkeys.register(keyCode: kVK_Delete, modifiers: controlKey | optionKey) { [weak self] in
-            self?.restoreFocusedWindow()
+    private func perform(_ action: SnapAction) {
+        if let zone = action.zone {
+            snapFocusedWindow(to: zone)
+        } else {
+            restoreFocusedWindow()
         }
     }
 

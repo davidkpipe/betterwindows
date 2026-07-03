@@ -56,6 +56,13 @@ Repeat the "Drag snapping" section in each of:
 - [ ] Window edge/corner resize drag
 - [ ] Desktop rubber-band selection reaching an edge
 
+## Settings window
+
+- [ ] Re-record a shortcut: it takes effect immediately (no relaunch) and survives relaunch
+- [ ] Recording a combo already used by another action beeps and shows "Used by …" — the old assignment is untouched
+- [ ] The drag-snap toggle disables edge previews live; re-enabling restores them without a relaunch
+- [ ] (App bundle only) The launch-at-login toggle survives logout/login and reflects the real registration state when the window is reopened
+
 ## Permission gate
 
 - [ ] With Accessibility revoked: any snap hotkey shows guidance with a working "Open System Settings" deep link — no silent failure

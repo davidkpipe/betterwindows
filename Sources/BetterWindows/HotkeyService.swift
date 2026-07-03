@@ -69,6 +69,15 @@ final class HotkeyService {
         return true
     }
 
+    /// Removes every registered hotkey (used before re-applying an edited
+    /// binding set).
+    func unregisterAll() {
+        for registration in registrations.values {
+            UnregisterEventHotKey(registration.ref)
+        }
+        registrations.removeAll()
+    }
+
     private func fire(id: UInt32) {
         registrations[id]?.handler()
     }
