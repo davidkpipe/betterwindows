@@ -93,6 +93,22 @@ Repeat the "Drag snapping" section in each of:
 - [ ] The drag-snap toggle disables edge previews live; re-enabling restores them without a relaunch
 - [ ] (App bundle only) The launch-at-login toggle survives logout/login and reflects the real registration state when the window is reopened
 
+## Resilience (displays, sleep, tap recovery)
+
+- [ ] Unplug the external display: drag previews and hotkey snaps immediately target the remaining display's geometry; ⌥Tab opens on the remaining display — no relaunch
+- [ ] Replug it: zones, hotkeys, and the switcher follow the restored layout
+- [ ] Change a display's resolution: the next preview/snap uses the new visible frame — no stale sizes
+- [ ] Sleep and wake: drag snapping, all hotkeys, and ⌥Tab work without relaunching
+- [ ] Display change (or wake) while the switcher panel is open: the panel dismisses; the next ⌥Tab lays out on the new configuration
+- [ ] Display change mid-drag: the preview cancels cleanly; the next drag previews normally
+- [ ] Snap a window on the external display, unplug that display, then ⌃⌥⌫: the window restores fully visible on an attached display — size preserved when it fits, shrunk to the display when not; a window mostly visible on remaining displays restores to exactly its original frame
+
+## Performance (idle resource use)
+
+- [ ] With BetterWindows idle (no drags, no switcher, windows closed): Activity Monitor shows ~0.0% CPU sustained. The app is event-driven — no polling loops or timers while idle (the onboarding window's 1s permission poll runs only while that window is open)
+- [ ] While typing continuously in another app: BetterWindows CPU stays ~0% (the key tap does a constant-time check per event)
+- [ ] After hours of normal use, memory stays modest (tens of MB): the thumbnail cache holds at most one scaled capture per open window and is pruned against live windows on every switcher invocation
+
 ## Onboarding & permission gate
 
 - [ ] First launch with Accessibility missing: the welcome window opens automatically

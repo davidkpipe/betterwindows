@@ -30,7 +30,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         switcherCoordinator.applyEnabledState()
         self.switcherCoordinator = switcherCoordinator
 
+        observeSystemStateChanges()
         presentOnboardingIfNeeded()
+    }
+
+    /// Display reconfiguration and wake both invalidate in-flight sessions
+    /// and can leave event taps silently disabled — recover from either
+    /// without a relaunch.
+    private func observeSystemStateChanges() {
+        _ = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleSystemStateChange()
+        }
+        _ = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleSystemStateChange()
+        }
+    }
+
+    private func handleSystemStateChange() {
+        dragCoordinator?.handleSystemStateChange()
+        switcherCoordinator?.handleSystemStateChange()
     }
 
     // MARK: Status item
@@ -221,7 +247,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         else {
             return
         }
-        WindowControl.setFrame(original, window: window, app: app)
+        // The pre-snap display may be gone by now — land somewhere real.
+        let target = FrameRelocator.ensureVisible(original, in: Displays.allVisibleFrames)
+        WindowControl.setFrame(target, window: window, app: app)
     }
 
     /// The visible frame (menu bar and Dock excluded), in AX coordinates, of

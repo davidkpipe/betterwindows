@@ -7,6 +7,15 @@ enum Displays {
         NSScreen.screens.first?.frame.height ?? 0
     }
 
+    /// Visible frames of every attached display, in CG space — the
+    /// candidate homes when a restored frame's display is gone.
+    static var allVisibleFrames: [CGRect] {
+        let primaryHeight = primaryScreenHeight
+        return NSScreen.screens.map {
+            ScreenGeometry.cgRect(fromAppKit: $0.visibleFrame, primaryScreenHeight: primaryHeight)
+        }
+    }
+
     /// The display containing `point` (CG coordinates): its full frame and
     /// its visible frame, both in CG space. Falls back to the main display.
     static func under(_ point: CGPoint) -> (frame: CGRect, visibleFrame: CGRect)? {

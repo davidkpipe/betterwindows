@@ -58,6 +58,18 @@ final class SwitcherCoordinator {
         }
     }
 
+    /// Display layout changed or the machine woke: an open panel's geometry
+    /// is stale, and macOS may have silently disabled the tap. Dismiss the
+    /// former, re-assert the latter.
+    func handleSystemStateChange() {
+        if session != nil {
+            tap.endSession()
+            cancel()
+        }
+        tap.reassert()
+        applyEnabledState()
+    }
+
     // MARK: Session
 
     private func begin() -> Bool {
