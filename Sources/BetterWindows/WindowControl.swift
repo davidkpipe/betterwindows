@@ -31,18 +31,20 @@ enum WindowControl {
     // MARK: Focused window
 
     /// The focused window of the frontmost app, plus the app's own AX element
-    /// (required to toggle the enhanced-user-interface setting around writes).
-    static func focusedWindow() throws -> (window: AXUIElement, app: AXUIElement) {
+    /// (required to toggle the enhanced-user-interface setting around writes)
+    /// and its process id (used to watch window lifetime).
+    static func focusedWindow() throws -> (window: AXUIElement, app: AXUIElement, pid: pid_t) {
         guard let frontmost = NSWorkspace.shared.frontmostApplication else {
             throw Failure.noFocusedWindow
         }
-        let app = AXUIElementCreateApplication(frontmost.processIdentifier)
+        let pid = frontmost.processIdentifier
+        let app = AXUIElementCreateApplication(pid)
         var ref: CFTypeRef?
         let status = AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute as CFString, &ref)
         guard status == .success, let raw = ref, CFGetTypeID(raw) == AXUIElementGetTypeID() else {
             throw Failure.noFocusedWindow
         }
-        return (raw as! AXUIElement, app)
+        return (raw as! AXUIElement, app, pid)
     }
 
     // MARK: Frames

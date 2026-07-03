@@ -2,7 +2,7 @@
 
 Windows-style window management for macOS: drag-to-edge snapping with an overlay preview, customizable hotkeys, and an Option-Tab window switcher with live thumbnails. A from-scratch replacement for 1Piece.
 
-**Status:** early development. The repo currently contains the app skeleton plus hotkey-driven zone snapping (halves, quarters, maximize, center) via the Accessibility API. See the [PRD](https://github.com/davidkpipe/betterwindows/issues/1) and open issues for the roadmap.
+**Status:** early development. The repo currently contains the app skeleton plus hotkey-driven zone snapping (halves, quarters, maximize, center) with snap-and-restore, via the Accessibility API. See the [PRD](https://github.com/davidkpipe/betterwindows/issues/1) and open issues for the roadmap.
 
 ## Requirements
 
@@ -32,6 +32,7 @@ Default hotkeys (⌃⌥ is Control + Option):
 | ⌃⌥U / ⌃⌥I | Top-left / top-right quarter |
 | ⌃⌥J / ⌃⌥K | Bottom-left / bottom-right quarter |
 | ⌃⌥C | Center (keeps the window's size) |
+| ⌃⌥⌫ | Restore pre-snap size and position |
 
 Every action applies to the focused window on whichever display it occupies. Drag-to-edge snapping arrives in a later slice.
 
