@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let settings = AppSettings()
     private let hotkeys = HotkeyService()
     private let snapTracker = SnapTracker()
+    private var dragCoordinator: DragCoordinator?
     private var statusItem: NSStatusItem?
     private var enabledMenuItem: NSMenuItem?
     private var accessibilityMenuItem: NSMenuItem?
@@ -13,6 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setUpStatusItem()
         registerHotkeys()
+
+        let dragCoordinator = DragCoordinator(settings: settings)
+        dragCoordinator.startIfPossible()
+        self.dragCoordinator = dragCoordinator
     }
 
     // MARK: Status item
@@ -73,6 +78,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func refreshMenuState() {
         enabledMenuItem?.state = settings.isEnabled ? .on : .off
         accessibilityMenuItem?.isHidden = WindowControl.isTrusted()
+        // Retry the drag tap here so granting Accessibility takes effect
+        // without a relaunch (full onboarding is a later slice).
+        dragCoordinator?.startIfPossible()
     }
 
     @objc private func toggleEnabled(_ sender: NSMenuItem) {
@@ -151,18 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// The visible frame (menu bar and Dock excluded), in AX coordinates, of
     /// the display the window currently occupies.
     private func visibleFrameCG(forWindowAt windowFrame: CGRect) -> CGRect? {
-        guard let primary = NSScreen.screens.first else { return nil }
-        let primaryHeight = primary.frame.height
-        let center = CGPoint(x: windowFrame.midX, y: windowFrame.midY)
-        let screen = NSScreen.screens.first(where: { candidate in
-            ScreenGeometry
-                .cgRect(fromAppKit: candidate.frame, primaryScreenHeight: primaryHeight)
-                .contains(center)
-        }) ?? NSScreen.main ?? primary
-        return ScreenGeometry.cgRect(
-            fromAppKit: screen.visibleFrame,
-            primaryScreenHeight: primaryHeight
-        )
+        Displays.under(CGPoint(x: windowFrame.midX, y: windowFrame.midY))?.visibleFrame
     }
 
     // MARK: Accessibility permission

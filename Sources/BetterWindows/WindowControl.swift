@@ -47,6 +47,58 @@ enum WindowControl {
         return (raw as! AXUIElement, app, pid)
     }
 
+    // MARK: Window under a point
+
+    private static let systemWide = AXUIElementCreateSystemWide()
+
+    /// The window under `point` (CG coordinates) and its frame, if any.
+    static func window(at point: CGPoint) -> (window: AXUIElement, frame: CGRect)? {
+        var hitRef: AXUIElement?
+        let status = AXUIElementCopyElementAtPosition(
+            systemWide, Float(point.x), Float(point.y), &hitRef
+        )
+        guard status == .success, let hit = hitRef,
+              let window = containingWindow(of: hit),
+              let frame = frame(of: window)
+        else {
+            return nil
+        }
+        return (window, frame)
+    }
+
+    private static func containingWindow(of element: AXUIElement) -> AXUIElement? {
+        if role(of: element) == kAXWindowRole { return element }
+
+        // Most elements expose their window directly.
+        var ref: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXWindowAttribute as CFString, &ref) == .success,
+           let raw = ref, CFGetTypeID(raw) == AXUIElementGetTypeID() {
+            return (raw as! AXUIElement)
+        }
+
+        // Fall back to walking the parent chain.
+        var current = element
+        for _ in 0 ..< 25 {
+            var parentRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(current, kAXParentAttribute as CFString, &parentRef) == .success,
+                  let rawParent = parentRef, CFGetTypeID(rawParent) == AXUIElementGetTypeID()
+            else {
+                return nil
+            }
+            current = rawParent as! AXUIElement
+            if role(of: current) == kAXWindowRole { return current }
+        }
+        return nil
+    }
+
+    private static func role(of element: AXUIElement) -> String? {
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &ref) == .success else {
+            return nil
+        }
+        return ref as? String
+    }
+
     // MARK: Frames
 
     /// The window's frame in Accessibility/CG coordinates (top-left origin).
