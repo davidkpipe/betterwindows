@@ -8,6 +8,7 @@ public final class AppSettings {
     public static let isDragSnappingEnabledKey = "isDragSnappingEnabled"
     public static let hotkeyBindingsKey = "hotkeyBindings"
     public static let hasCompletedOnboardingKey = "hasCompletedOnboarding"
+    public static let isSwitcherEnabledKey = "isSwitcherEnabled"
 
     private let defaults: UserDefaults
 
@@ -33,6 +34,13 @@ public final class AppSettings {
     public var hasCompletedOnboarding: Bool {
         get { defaults.bool(forKey: Self.hasCompletedOnboardingKey) }
         set { defaults.set(newValue, forKey: Self.hasCompletedOnboardingKey) }
+    }
+
+    /// Whether the Option-Tab switcher is active. While off, Option-Tab
+    /// passes through to apps untouched.
+    public var isSwitcherEnabled: Bool {
+        get { defaults.object(forKey: Self.isSwitcherEnabledKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Self.isSwitcherEnabledKey) }
     }
 
     // MARK: Hotkey bindings

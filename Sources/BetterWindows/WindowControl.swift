@@ -106,6 +106,62 @@ enum WindowControl {
         return ref as? String
     }
 
+    private static func subrole(of element: AXUIElement) -> String? {
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &ref) == .success else {
+            return nil
+        }
+        return ref as? String
+    }
+
+    // MARK: App windows (switcher)
+
+    /// The app's AX element with a short messaging timeout, so talking to a
+    /// hung app cannot stall the caller for the multi-second AX default.
+    static func appElement(pid: pid_t) -> AXUIElement {
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, 0.25)
+        return app
+    }
+
+    /// All standard windows of an app, minimized included. The AX API only
+    /// surfaces windows on the current Space — exactly the switcher's scope.
+    static func standardWindows(ofAppWithPid pid: pid_t) -> [AXUIElement] {
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            appElement(pid: pid), kAXWindowsAttribute as CFString, &ref
+        ) == .success,
+            let raw = ref, CFGetTypeID(raw) == CFArrayGetTypeID(),
+            let windows = raw as? [AXUIElement]
+        else {
+            return []
+        }
+        return windows.filter { subrole(of: $0) == kAXStandardWindowSubrole }
+    }
+
+    static func title(of window: AXUIElement) -> String? {
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &ref) == .success else {
+            return nil
+        }
+        return ref as? String
+    }
+
+    static func isMinimized(_ window: AXUIElement) -> Bool {
+        boolValue(of: window, attribute: kAXMinimizedAttribute as String) ?? false
+    }
+
+    static func setMinimized(_ minimized: Bool, window: AXUIElement) {
+        setBoolValue(minimized, of: window, attribute: kAXMinimizedAttribute as String)
+    }
+
+    /// Brings the window to the front of its app and makes it the main
+    /// window. App-level activation is the caller's job.
+    static func raise(_ window: AXUIElement) {
+        setBoolValue(true, of: window, attribute: kAXMainAttribute as String)
+        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+    }
+
     // MARK: Frames
 
     /// The window's frame in Accessibility/CG coordinates (top-left origin).

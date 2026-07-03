@@ -9,6 +9,10 @@ final class SettingsWindowController: NSWindowController {
     private var loginItemCheckbox: NSButton?
     private var loginNoteLabel: NSTextField?
 
+    /// Fired after the switcher toggle changes, so the app can start or
+    /// stop the Option-Tab tap immediately.
+    var onSwitcherToggle: (() -> Void)?
+
     init(settings: AppSettings, hotkeyStore: HotkeyStore) {
         self.settings = settings
         self.hotkeyStore = hotkeyStore
@@ -63,6 +67,13 @@ final class SettingsWindowController: NSWindowController {
         )
         dragCheckbox.state = settings.isDragSnappingEnabled ? .on : .off
 
+        let switcherCheckbox = NSButton(
+            checkboxWithTitle: "Option-Tab window switcher",
+            target: self,
+            action: #selector(toggleSwitcher(_:))
+        )
+        switcherCheckbox.state = settings.isSwitcherEnabled ? .on : .off
+
         let loginCheckbox = NSButton(
             checkboxWithTitle: "Launch at login",
             target: self,
@@ -81,6 +92,7 @@ final class SettingsWindowController: NSWindowController {
             grid,
             sectionLabel("Behavior"),
             dragCheckbox,
+            switcherCheckbox,
             loginCheckbox,
             loginNote,
         ])
@@ -106,6 +118,11 @@ final class SettingsWindowController: NSWindowController {
 
     @objc private func toggleDragSnapping(_ sender: NSButton) {
         settings.isDragSnappingEnabled = sender.state == .on
+    }
+
+    @objc private func toggleSwitcher(_ sender: NSButton) {
+        settings.isSwitcherEnabled = sender.state == .on
+        onSwitcherToggle?()
     }
 
     @objc private func toggleLaunchAtLogin(_ sender: NSButton) {

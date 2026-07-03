@@ -6,20 +6,6 @@ import BetterWindowsCore
 /// watches tracked windows for destruction, and drops all of an app's
 /// entries when it terminates.
 final class SnapTracker {
-    /// Hashable wrapper — AXUIElements obtained separately for the same
-    /// window compare CFEqual, so they can key the ledger.
-    struct WindowKey: Hashable {
-        let element: AXUIElement
-
-        static func == (lhs: WindowKey, rhs: WindowKey) -> Bool {
-            CFEqual(lhs.element, rhs.element)
-        }
-
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(CFHash(element))
-        }
-    }
-
     private var ledger = RestoreLedger<WindowKey>()
     private var observers: [pid_t: AXObserver] = [:]
     private var trackedWindows: [pid_t: Set<WindowKey>] = [:]

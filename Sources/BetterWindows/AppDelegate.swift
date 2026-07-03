@@ -7,10 +7,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let snapTracker = SnapTracker()
     private lazy var hotkeyStore = HotkeyStore(settings: settings)
     private var dragCoordinator: DragCoordinator?
+    private var switcherCoordinator: SwitcherCoordinator?
     private var settingsWindowController: SettingsWindowController?
     private var onboardingWindowController: OnboardingWindowController?
     private var statusItem: NSStatusItem?
     private var enabledMenuItem: NSMenuItem?
+    private var switcherMenuItem: NSMenuItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setUpStatusItem()
@@ -23,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let dragCoordinator = DragCoordinator(settings: settings, snapTracker: snapTracker)
         dragCoordinator.startIfPossible()
         self.dragCoordinator = dragCoordinator
+
+        let switcherCoordinator = SwitcherCoordinator(settings: settings)
+        switcherCoordinator.applyEnabledState()
+        self.switcherCoordinator = switcherCoordinator
 
         presentOnboardingIfNeeded()
     }
@@ -54,6 +60,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         enabledMenuItem.target = self
         menu.addItem(enabledMenuItem)
 
+        let switcherMenuItem = NSMenuItem(
+            title: "Option-Tab Switcher",
+            action: #selector(toggleSwitcher(_:)),
+            keyEquivalent: ""
+        )
+        switcherMenuItem.target = self
+        menu.addItem(switcherMenuItem)
+
         let settingsItem = NSMenuItem(
             title: "Settings…",
             action: #selector(openSettings(_:)),
@@ -82,6 +96,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         self.statusItem = statusItem
         self.enabledMenuItem = enabledMenuItem
+        self.switcherMenuItem = switcherMenuItem
         refreshMenuState()
     }
 
@@ -91,9 +106,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func refreshMenuState() {
         enabledMenuItem?.state = settings.isEnabled ? .on : .off
-        // Retry the drag tap here as a backstop, so granting Accessibility
+        switcherMenuItem?.state = settings.isSwitcherEnabled ? .on : .off
+        // Retry the taps here as a backstop, so granting Accessibility
         // takes effect without a relaunch even if onboarding never opened.
         dragCoordinator?.startIfPossible()
+        switcherCoordinator?.applyEnabledState()
     }
 
     @objc private func toggleEnabled(_ sender: NSMenuItem) {
@@ -101,12 +118,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshMenuState()
     }
 
+    @objc private func toggleSwitcher(_ sender: NSMenuItem) {
+        settings.isSwitcherEnabled.toggle()
+        refreshMenuState()
+    }
+
     @objc private func openSettings(_ sender: NSMenuItem) {
         if settingsWindowController == nil {
-            settingsWindowController = SettingsWindowController(
+            let controller = SettingsWindowController(
                 settings: settings,
                 hotkeyStore: hotkeyStore
             )
+            controller.onSwitcherToggle = { [weak self] in
+                self?.refreshMenuState()
+            }
+            settingsWindowController = controller
         }
         settingsWindowController?.showWindow(nil)
     }
@@ -134,6 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let controller = OnboardingWindowController(settings: settings)
             controller.onAccessibilityGranted = { [weak self] in
                 self?.dragCoordinator?.startIfPossible()
+                self?.switcherCoordinator?.applyEnabledState()
             }
             onboardingWindowController = controller
         }
