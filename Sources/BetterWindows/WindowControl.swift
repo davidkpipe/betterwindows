@@ -47,6 +47,13 @@ enum WindowControl {
         return (raw as! AXUIElement, app, pid)
     }
 
+    /// The process id owning an AX element.
+    static func pid(of element: AXUIElement) -> pid_t? {
+        var pid: pid_t = 0
+        guard AXUIElementGetPid(element, &pid) == .success else { return nil }
+        return pid
+    }
+
     // MARK: Window under a point
 
     private static let systemWide = AXUIElementCreateSystemWide()

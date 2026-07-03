@@ -66,4 +66,29 @@ public enum SnapEngine {
             )
         }
     }
+
+    /// Where a torn-off (un-snapped) window sits while its drag continues:
+    /// the original size, positioned so the cursor keeps the same relative
+    /// horizontal grip it had on the snapped frame and its vertical offset
+    /// from the top edge (clamped into the restored height).
+    public static func tearOffFrame(
+        originalSize: CGSize,
+        cursor: CGPoint,
+        grabPoint: CGPoint,
+        snappedFrame: CGRect
+    ) -> CGRect {
+        let relativeX = snappedFrame.width > 0
+            ? min(max((grabPoint.x - snappedFrame.minX) / snappedFrame.width, 0), 1)
+            : 0.5
+        let grabOffsetY = min(
+            max(grabPoint.y - snappedFrame.minY, 0),
+            max(originalSize.height - 1, 0)
+        )
+        return CGRect(
+            x: cursor.x - originalSize.width * relativeX,
+            y: cursor.y - grabOffsetY,
+            width: originalSize.width,
+            height: originalSize.height
+        )
+    }
 }

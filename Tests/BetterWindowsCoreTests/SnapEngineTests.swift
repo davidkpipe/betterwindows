@@ -93,6 +93,52 @@ final class SnapEngineTests: XCTestCase {
         XCTAssertEqual(centered, v)
     }
 
+    func testTearOffKeepsRelativeHorizontalGripAndTopOffset() {
+        // Snapped 800pt-wide half, grabbed at 25% of its width, 12pt below
+        // the top edge; the cursor is now mid-screen.
+        let snapped = CGRect(x: 0, y: 25, width: 800, height: 975)
+        let grab = CGPoint(x: 200, y: 37)
+        let cursor = CGPoint(x: 900, y: 400)
+
+        let torn = SnapEngine.tearOffFrame(
+            originalSize: CGSize(width: 400, height: 300),
+            cursor: cursor,
+            grabPoint: grab,
+            snappedFrame: snapped
+        )
+
+        XCTAssertEqual(torn.size, CGSize(width: 400, height: 300))
+        XCTAssertEqual(torn.minX, 800, "cursor keeps its 25% grip: 900 - 400 x 0.25")
+        XCTAssertEqual(torn.minY, 388, "top edge stays 12pt above the cursor")
+    }
+
+    func testTearOffClampsAGrabDeeperThanTheOriginalHeight() {
+        // Grabbed far below where the restored window's bottom edge will be:
+        // the torn frame must still contain the cursor vertically.
+        let snapped = CGRect(x: 0, y: 0, width: 1000, height: 1000)
+        let grabAndCursor = CGPoint(x: 500, y: 600)
+
+        let torn = SnapEngine.tearOffFrame(
+            originalSize: CGSize(width: 300, height: 200),
+            cursor: grabAndCursor,
+            grabPoint: grabAndCursor,
+            snappedFrame: snapped
+        )
+
+        XCTAssertTrue(torn.minY <= grabAndCursor.y && grabAndCursor.y <= torn.maxY)
+    }
+
+    func testTearOffWithADegenerateSnappedFrameCentersHorizontally() {
+        let torn = SnapEngine.tearOffFrame(
+            originalSize: CGSize(width: 400, height: 300),
+            cursor: CGPoint(x: 500, y: 100),
+            grabPoint: CGPoint(x: 500, y: 100),
+            snappedFrame: CGRect(x: 500, y: 100, width: 0, height: 0)
+        )
+
+        XCTAssertEqual(torn.midX, 500)
+    }
+
     func testEveryZoneStaysWithinTheVisibleFrame() {
         for v in layouts {
             for zone in SnapZone.allCases {

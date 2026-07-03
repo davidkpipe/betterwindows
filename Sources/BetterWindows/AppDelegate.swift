@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setUpStatusItem()
         registerHotkeys()
 
-        let dragCoordinator = DragCoordinator(settings: settings)
+        let dragCoordinator = DragCoordinator(settings: settings, snapTracker: snapTracker)
         dragCoordinator.startIfPossible()
         self.dragCoordinator = dragCoordinator
     }
