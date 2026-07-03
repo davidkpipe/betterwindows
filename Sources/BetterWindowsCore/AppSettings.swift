@@ -7,6 +7,7 @@ public final class AppSettings {
     public static let isEnabledKey = "isEnabled"
     public static let isDragSnappingEnabledKey = "isDragSnappingEnabled"
     public static let hotkeyBindingsKey = "hotkeyBindings"
+    public static let hasCompletedOnboardingKey = "hasCompletedOnboarding"
 
     private let defaults: UserDefaults
 
@@ -25,6 +26,13 @@ public final class AppSettings {
     public var isDragSnappingEnabled: Bool {
         get { defaults.object(forKey: Self.isDragSnappingEnabledKey) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Self.isDragSnappingEnabledKey) }
+    }
+
+    /// Whether the user has closed the onboarding window at least once;
+    /// automatic presentation at launch stops after that.
+    public var hasCompletedOnboarding: Bool {
+        get { defaults.bool(forKey: Self.hasCompletedOnboardingKey) }
+        set { defaults.set(newValue, forKey: Self.hasCompletedOnboardingKey) }
     }
 
     // MARK: Hotkey bindings
