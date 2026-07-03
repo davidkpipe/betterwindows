@@ -5,6 +5,7 @@ import Carbon.HIToolbox
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let settings = AppSettings()
     private let hotkeys = HotkeyService()
+    private let snapTracker = SnapTracker()
     private var statusItem: NSStatusItem?
     private var enabledMenuItem: NSMenuItem?
     private var accessibilityMenuItem: NSMenuItem?
@@ -105,6 +106,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self?.snapFocusedWindow(to: binding.zone)
             }
         }
+
+        // ⌃⌥⌫: restore the focused window to its pre-snap frame.
+        hotkeys.register(keyCode: kVK_Delete, modifiers: controlKey | optionKey) { [weak self] in
+            self?.restoreFocusedWindow()
+        }
     }
 
     private func snapFocusedWindow(to zone: SnapZone) {
@@ -113,7 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             presentAccessibilityGuidance()
             return
         }
-        guard let (window, app) = try? WindowControl.focusedWindow(),
+        guard let (window, app, pid) = try? WindowControl.focusedWindow(),
               let windowFrame = WindowControl.frame(of: window),
               let visibleFrame = visibleFrameCG(forWindowAt: windowFrame)
         else {
@@ -124,7 +130,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             visibleFrame: visibleFrame,
             windowFrame: windowFrame
         )
+        snapTracker.noteSnap(of: window, pid: pid, preSnapFrame: windowFrame)
         WindowControl.setFrame(target, window: window, app: app)
+    }
+
+    private func restoreFocusedWindow() {
+        guard settings.isEnabled else { return }
+        guard WindowControl.isTrusted() else {
+            presentAccessibilityGuidance()
+            return
+        }
+        guard let (window, app, _) = try? WindowControl.focusedWindow(),
+              let original = snapTracker.consumeRestoreFrame(of: window)
+        else {
+            return
+        }
+        WindowControl.setFrame(original, window: window, app: app)
     }
 
     /// The visible frame (menu bar and Dock excluded), in AX coordinates, of
