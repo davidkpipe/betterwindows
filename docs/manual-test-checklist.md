@@ -68,6 +68,16 @@ Repeat the "Drag snapping" section in each of:
 - [ ] With a second display: the panel appears on the display of the focused window
 - [ ] Windows on another Space do not appear; windows opened after the panel is up appear on the next invocation
 
+## Switcher grid navigation
+
+- [ ] With enough windows to wrap (or a narrow display): entries lay out as a grid, MRU order reading left-to-right, top-to-bottom
+- [ ] → steps through entries in the same order as Tab and wraps from the last entry to the first; ← mirrors Shift-Tab
+- [ ] ↓ moves down the column and wraps to the top; ↑ mirrors it; in a column the ragged last row lacks, ↓/↑ skip past the gap
+- [ ] Hovering an entry moves the highlight — the same highlight the keys move, never a second one
+- [ ] Opening the panel under a stationary cursor keeps the initial selection (the previous window) until the mouse actually moves
+- [ ] Clicking an entry activates that window immediately (deminimizing if needed); still holding Option afterwards does nothing until a new Option-Tab
+- [ ] Arrow keys while the panel is up never reach the frontmost app; with the panel closed, ⌃⌥-arrow snap hotkeys still work
+
 ## Switcher thumbnails (Screen Recording)
 
 - [ ] With Screen Recording granted: entries show window-content thumbnails with an app-icon badge; type in a window, reopen the switcher — the thumbnail reflects the new contents (not the prior invocation's)

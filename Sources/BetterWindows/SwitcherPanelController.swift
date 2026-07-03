@@ -1,13 +1,53 @@
 import AppKit
 import BetterWindowsCore
 
-/// The switcher HUD: a non-activating panel with one cell per window, the
-/// selection highlighted, shown on the active display. With Screen
-/// Recording granted the cells are live window thumbnails (app icon badge +
-/// title); otherwise the icons + titles fallback with a hint to onboarding.
-/// All keyboard handling lives in SwitcherTap — this panel never becomes
-/// key and ignores the mouse.
+/// A switcher cell that reports hover and clicks without ever activating
+/// the app — mouse selection feeds the same highlight state as the keys.
+private final class SwitcherCellView: NSView {
+    var onHover: (() -> Void)?
+    var onClick: (() -> Void)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(
+            NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeAlways],
+                owner: self
+            )
+        )
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        onHover?()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onClick?()
+    }
+}
+
+/// The switcher HUD: a non-activating panel with one cell per window laid
+/// out as a grid in MRU order (left to right, top to bottom), the selection
+/// highlighted, shown on the active display. With Screen Recording granted
+/// the cells are live window thumbnails (app icon badge + title); otherwise
+/// the icons + titles fallback with a hint to onboarding. Keys live in
+/// SwitcherTap; the mouse reports through onHoverIndex/onClickIndex. The
+/// panel never becomes key.
 final class SwitcherPanelController {
+    /// Mouse moved over a cell — the coordinator moves the selection there.
+    var onHoverIndex: ((Int) -> Void)?
+    /// A cell was clicked — the coordinator activates that window.
+    var onClickIndex: ((Int) -> Void)?
+
+    /// Columns of the currently shown grid; drives arrow-key geometry.
+    private(set) var columns = 1
+
     private let panel: NSPanel
     private var cells: [NSView] = []
     private var keys: [WindowKey] = []
@@ -34,7 +74,7 @@ final class SwitcherPanelController {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        panel.ignoresMouseEvents = true
+        panel.ignoresMouseEvents = false
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
         panel.isReleasedWhenClosed = false
@@ -52,19 +92,27 @@ final class SwitcherPanelController {
         guard !entries.isEmpty, let screen = targetScreen(for: entries.first) else { return }
 
         let thumbnailMode = thumbnails != nil
-        let count = CGFloat(entries.count)
-        let maxCellWidth: CGFloat = thumbnailMode ? 228 : 136
-        let minCellWidth: CGFloat = thumbnailMode ? 128 : 72
-        let available = screen.visibleFrame.width - 48 - 2 * inset - cellSpacing * (count - 1)
         let metrics = Metrics(
-            cellWidth: min(maxCellWidth, max(minCellWidth, available / count)),
+            cellWidth: thumbnailMode ? 228 : 136,
             cellHeight: thumbnailMode ? 178 : 104,
             thumbnailHeight: thumbnailMode ? 132 : 0
         )
+
+        // Cells keep their size; the grid wraps to more rows instead.
+        let usableWidth = screen.visibleFrame.width - 48 - 2 * inset
+        let maxColumns = max(
+            1,
+            Int((usableWidth + cellSpacing) / (metrics.cellWidth + cellSpacing))
+        )
+        columns = min(entries.count, maxColumns)
+        let rows = (entries.count + columns - 1) / columns
+
         let footnoteHeight: CGFloat = footnote == nil ? 0 : 22
         let panelSize = CGSize(
-            width: 2 * inset + count * metrics.cellWidth + (count - 1) * cellSpacing,
-            height: 2 * inset + metrics.cellHeight + footnoteHeight
+            width: 2 * inset + CGFloat(columns) * metrics.cellWidth
+                + CGFloat(columns - 1) * cellSpacing,
+            height: 2 * inset + CGFloat(rows) * metrics.cellHeight
+                + CGFloat(rows - 1) * cellSpacing + footnoteHeight
         )
 
         let effect = NSVisualEffectView(frame: NSRect(origin: .zero, size: panelSize))
@@ -86,10 +134,16 @@ final class SwitcherPanelController {
                 thumbnailMode: thumbnailMode,
                 placeholder: thumbnails?[entry.key]
             )
+            cell.onHover = { [weak self] in self?.onHoverIndex?(index) }
+            cell.onClick = { [weak self] in self?.onClickIndex?(index) }
+            // Row 0 is the top row; AppKit's y axis points up.
+            let row = index / columns
+            let column = index % columns
             cell.setFrameOrigin(
                 NSPoint(
-                    x: inset + CGFloat(index) * (metrics.cellWidth + cellSpacing),
+                    x: inset + CGFloat(column) * (metrics.cellWidth + cellSpacing),
                     y: inset + footnoteHeight
+                        + CGFloat(rows - 1 - row) * (metrics.cellHeight + cellSpacing)
                 )
             )
             effect.addSubview(cell)
@@ -153,8 +207,8 @@ final class SwitcherPanelController {
         metrics: Metrics,
         thumbnailMode: Bool,
         placeholder: NSImage?
-    ) -> NSView {
-        let cell = NSView(
+    ) -> SwitcherCellView {
+        let cell = SwitcherCellView(
             frame: NSRect(x: 0, y: 0, width: metrics.cellWidth, height: metrics.cellHeight)
         )
         cell.wantsLayer = true
