@@ -2,10 +2,13 @@ import AppKit
 import ApplicationServices
 import BetterWindowsCore
 
-/// Glues drag events to zone hit-testing and the overlay preview. This slice
-/// deliberately stops short of writing window frames: the dragged window is
-/// never touched, and releasing just dismisses the preview — the
-/// single-write commit is the next slice.
+/// Glues drag events, zone hit-testing, the overlay preview, the restore
+/// ledger, and WindowControl together. The structural fix for the 1Piece
+/// revert-on-release bug lives here: the dragged window is never resized
+/// during the drag, and releasing inside a previewed zone commits the frame
+/// with a single write-verify-retry pass — exactly the frame the preview
+/// showed. The one deliberate exception is drag-away un-snap, which writes
+/// once at tear-off so a snapped window pops back to its pre-snap size.
 final class DragCoordinator {
     /// Window movement must match the cursor within this tolerance to count
     /// as a title-bar move-drag (the window lags the cursor between events).
@@ -15,6 +18,7 @@ final class DragCoordinator {
     private static let qualificationDeadline: CGFloat = 60
 
     private let settings: AppSettings
+    private let snapTracker: SnapTracker
     private var session = DragSession()
     private let hitTester = SnapHitTester()
     private let overlay = OverlayController()
@@ -26,9 +30,11 @@ final class DragCoordinator {
     private var captureCursor: CGPoint?
     private var qualified = false
     private var activeZone: SnapZone?
+    private var previewTarget: CGRect?
 
-    init(settings: AppSettings) {
+    init(settings: AppSettings, snapTracker: SnapTracker) {
         self.settings = settings
+        self.snapTracker = snapTracker
     }
 
     /// Creates the event tap if possible (requires Accessibility). Safe to
@@ -57,6 +63,7 @@ final class DragCoordinator {
         case .moved(let point):
             updateSession(at: point)
         case .up:
+            commitIfReleasedInZone()
             session.end()
             clearDragState()
         case .escape:
@@ -93,6 +100,13 @@ final class DragCoordinator {
             switch qualification(of: window, initialFrame: initialFrame, cursor: point, baseline: baseline) {
             case .confirmed:
                 qualified = true
+                // Drag-away un-snap: a snapped window pops back to its
+                // pre-snap size under the cursor and the drag continues
+                // from the restored frame.
+                if let torn = tearOff(window: window, cursor: point, snappedFrame: initialFrame, baseline: baseline) {
+                    initialWindowFrame = torn
+                    return
+                }
             case .undecided:
                 return
             case .rejected:
@@ -112,10 +126,51 @@ final class DragCoordinator {
                 visibleFrame: display.visibleFrame,
                 windowFrame: initialFrame
             )
+            previewTarget = target
             overlay.show(cgFrame: target)
         } else {
+            previewTarget = nil
             overlay.hide()
         }
+    }
+
+    /// The single frame write of a completed drag: on release, inside a
+    /// previewed zone, to exactly the previewed frame. Cancelled drags and
+    /// releases outside a zone write nothing.
+    private func commitIfReleasedInZone() {
+        guard session.phase == .dragging, qualified,
+              activeZone != nil,
+              let target = previewTarget,
+              let window = draggedWindow,
+              let preSnapFrame = initialWindowFrame,
+              let pid = WindowControl.pid(of: window)
+        else { return }
+        let app = AXUIElementCreateApplication(pid)
+        snapTracker.noteSnap(of: window, pid: pid, preSnapFrame: preSnapFrame)
+        WindowControl.setFrame(target, window: window, app: app)
+    }
+
+    /// Consumes the window's restore-ledger entry when a snapped window is
+    /// dragged, writing its pre-snap size back under the cursor. Returns the
+    /// torn-off frame, or nil when the window was not snapped.
+    private func tearOff(
+        window: AXUIElement,
+        cursor: CGPoint,
+        snappedFrame: CGRect,
+        baseline: CGPoint
+    ) -> CGRect? {
+        guard let original = snapTracker.consumeRestoreFrame(of: window),
+              let pid = WindowControl.pid(of: window)
+        else { return nil }
+        let torn = SnapEngine.tearOffFrame(
+            originalSize: original.size,
+            cursor: cursor,
+            grabPoint: baseline,
+            snappedFrame: snappedFrame
+        )
+        let app = AXUIElementCreateApplication(pid)
+        WindowControl.setFrame(torn, window: window, app: app)
+        return torn
     }
 
     private enum Qualification {
@@ -161,6 +216,7 @@ final class DragCoordinator {
         captureCursor = nil
         qualified = false
         activeZone = nil
+        previewTarget = nil
         overlay.hide()
     }
 }
