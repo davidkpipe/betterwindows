@@ -50,7 +50,7 @@ final class DragCoordinator {
     }
 
     private func handle(_ event: DragMonitor.Event) {
-        guard settings.isEnabled else {
+        guard settings.isEnabled, settings.isDragSnappingEnabled else {
             if session.phase != .idle {
                 session.cancel()
                 clearDragState()

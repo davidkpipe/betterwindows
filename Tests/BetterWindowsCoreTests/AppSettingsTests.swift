@@ -36,4 +36,25 @@ final class AppSettingsTests: XCTestCase {
 
         XCTAssertTrue(AppSettings(defaults: defaults).isEnabled)
     }
+
+    func testDragSnappingDefaultsToEnabledAndPersists() {
+        XCTAssertTrue(AppSettings(defaults: defaults).isDragSnappingEnabled)
+
+        AppSettings(defaults: defaults).isDragSnappingEnabled = false
+
+        XCTAssertFalse(AppSettings(defaults: defaults).isDragSnappingEnabled)
+    }
+
+    func testHotkeyBindingsRoundTrip() {
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertNil(settings.storedHotkeyBindings(), "nothing stored on first launch")
+
+        let bindings: [SnapAction: HotkeyBinding] = [
+            .maximize: HotkeyBinding(keyCode: 36, modifiers: 6144),
+            .restore: HotkeyBinding(keyCode: 51, modifiers: 6144),
+        ]
+        settings.storeHotkeyBindings(bindings)
+
+        XCTAssertEqual(AppSettings(defaults: defaults).storedHotkeyBindings(), bindings)
+    }
 }
