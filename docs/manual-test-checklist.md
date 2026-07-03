@@ -68,6 +68,14 @@ Repeat the "Drag snapping" section in each of:
 - [ ] With a second display: the panel appears on the display of the focused window
 - [ ] Windows on another Space do not appear; windows opened after the panel is up appear on the next invocation
 
+## Switcher thumbnails (Screen Recording)
+
+- [ ] With Screen Recording granted: entries show window-content thumbnails with an app-icon badge; type in a window, reopen the switcher — the thumbnail reflects the new contents (not the prior invocation's)
+- [ ] The panel appears instantly; on the first invocation icons stand in and thumbnails fill in; on later invocations the previous captures stand in
+- [ ] A minimized window shows its last-seen contents (dimmed) if it was captured before minimizing, else its app icon
+- [ ] With Screen Recording denied: icons + titles rendering with the "Window previews need Screen Recording" footnote — no blank tiles, no crash
+- [ ] Grant Screen Recording (relaunch if macOS requires it): thumbnails appear on the next invocation without any setting change
+
 ## Settings window
 
 - [ ] Re-record a shortcut: it takes effect immediately (no relaunch) and survives relaunch

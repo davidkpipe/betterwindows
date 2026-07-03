@@ -13,6 +13,7 @@ final class SwitcherCoordinator {
     private let focusTracker = FocusTracker()
     private let tap = SwitcherTap()
     private let panel = SwitcherPanelController()
+    private let thumbnails = ThumbnailProvider()
 
     private var session: SwitcherSession?
     private var entries: [SwitcherEntry] = []
@@ -58,7 +59,37 @@ final class SwitcherCoordinator {
 
         entries = snapshot
         session = newSession
-        panel.show(entries: entries, selectedIndex: newSession.selectedIndex)
+
+        // Cached thumbnails are dropped for windows that no longer exist.
+        let liveKeys = entries.map(\.key)
+        thumbnails.prune(keeping: liveKeys)
+
+        if ThumbnailProvider.isAvailable() {
+            // The panel appears immediately with the previous invocation's
+            // captures (or app icons) standing in; fresh captures fill in
+            // as they complete.
+            var placeholders: [WindowKey: NSImage] = [:]
+            for key in liveKeys {
+                placeholders[key] = thumbnails.cachedImage(for: key)
+            }
+            panel.show(
+                entries: entries,
+                selectedIndex: newSession.selectedIndex,
+                thumbnails: placeholders,
+                footnote: nil
+            )
+            thumbnails.refresh(entries: entries) { [weak self] key, image in
+                guard let self, self.session != nil else { return }
+                self.panel.setThumbnail(forKey: key, image: image)
+            }
+        } else {
+            panel.show(
+                entries: entries,
+                selectedIndex: newSession.selectedIndex,
+                thumbnails: nil,
+                footnote: "Window previews need Screen Recording — see Setup Guide in the menu"
+            )
+        }
         return true
     }
 
